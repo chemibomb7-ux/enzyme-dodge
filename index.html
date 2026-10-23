@@ -15,20 +15,23 @@
       position: relative;
       user-select: none;
       -webkit-user-select: none;
+      contain: layout style paint;
     }
     .dpad-btn {
       touch-action: none;
       -webkit-tap-highlight-color: transparent;
+      transform: translateZ(0);
     }
     .dpad-btn:active {
-      transform: scale(0.92);
+      transform: scale(0.92) translateZ(0);
     }
-    /* Virtual Joystick Styles */
+    /* Virtual Joystick Styles (Optimized with Hardware Acceleration) */
     .joystick-zone {
       touch-action: none;
       user-select: none;
       -webkit-user-select: none;
       position: relative;
+      will-change: transform;
     }
     .joystick-base {
       position: relative;
@@ -37,11 +40,12 @@
       border-radius: 9999px;
       background: radial-gradient(circle, rgba(30, 41, 59, 0.9) 0%, rgba(15, 23, 42, 0.95) 100%);
       border: 2px solid rgba(56, 189, 248, 0.4);
-      box-shadow: inset 0 0 15px rgba(0, 0, 0, 0.6), 0 4px 15px rgba(0, 0, 0, 0.4);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
       display: flex;
       align-items: center;
       justify-content: center;
       cursor: grab;
+      transform: translateZ(0);
     }
     .joystick-base:active {
       cursor: grabbing;
@@ -53,11 +57,11 @@
       height: 48px;
       border-radius: 9999px;
       background: radial-gradient(circle at 35% 35%, #38bdf8 0%, #0284c7 60%, #0369a1 100%);
-      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.5), 0 0 12px rgba(56, 189, 248, 0.6);
-      border: 2px solid rgba(255, 255, 255, 0.8);
+      box-shadow: 0 3px 8px rgba(0, 0, 0, 0.5);
+      border: 2px solid rgba(255, 255, 255, 0.9);
       pointer-events: none;
       transform: translate3d(0, 0, 0);
-      transition: transform 0.05s ease-out;
+      will-change: transform;
     }
   </style>
 </head>
@@ -768,6 +772,7 @@
       bestTime = 0;
     }
 
+    // Logical dimensions
     const LOGICAL_WIDTH = 800;
     const LOGICAL_HEIGHT = 600;
 
@@ -787,6 +792,9 @@
     let lastSpawnTime = 0;
     let spawnInterval = 700;
 
+    // Detect mobile/tablet to turn off heavy shadowBlur effects
+    const isTouchDevice = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
+
     const keys = {
       ArrowUp: false,
       ArrowDown: false,
@@ -803,16 +811,20 @@
       active: false,
       vectorX: 0,
       vectorY: 0,
-      maxDistance: 45 // maximum knob displacement in pixels
+      maxDistance: 45
     };
 
+    // Performance-optimized Canvas Resizer (Limits DPR to 1.5 to prevent GPU bottleneck on tablets)
     function resizeCanvas() {
       const rect = canvas.getBoundingClientRect();
-      const dpr = window.devicePixelRatio || 1;
-      canvas.width = rect.width * dpr;
-      canvas.height = rect.height * dpr;
+      const rawDpr = window.devicePixelRatio || 1;
+      // Tablets can have DPR of 2.5 ~ 3.0 which burns GPU bandwidth. Cap at 1.5 for buttery smooth 60fps.
+      const dpr = Math.min(rawDpr, 1.5);
+      canvas.width = Math.round(rect.width * dpr);
+      canvas.height = Math.round(rect.height * dpr);
       ctx.setTransform(1, 0, 0, 1, 0, 0);
       ctx.scale(canvas.width / LOGICAL_WIDTH, canvas.height / LOGICAL_HEIGHT);
+      ctx.imageSmoothingEnabled = false; // Boosts mobile draw speed
     }
     window.addEventListener('resize', resizeCanvas);
 
@@ -1379,142 +1391,141 @@
     function renderScene() {
       ctx.clearRect(0, 0, LOGICAL_WIDTH, LOGICAL_HEIGHT);
 
+      // Arena Grid Background (Drawn with simple batched lines)
       ctx.strokeStyle = 'rgba(30, 41, 59, 0.4)';
       ctx.lineWidth = 1;
-      const gridSize = 40;
+      const gridSize = 50; // Increased spacing slightly to reduce path draws
+      ctx.beginPath();
       for (let x = 0; x <= LOGICAL_WIDTH; x += gridSize) {
-        ctx.beginPath();
         ctx.moveTo(x, 0);
         ctx.lineTo(x, LOGICAL_HEIGHT);
-        ctx.stroke();
       }
       for (let y = 0; y <= LOGICAL_HEIGHT; y += gridSize) {
-        ctx.beginPath();
         ctx.moveTo(0, y);
         ctx.lineTo(LOGICAL_WIDTH, y);
-        ctx.stroke();
       }
+      ctx.stroke();
 
-      ctx.strokeStyle = 'rgba(56, 189, 248, 0.2)';
-      ctx.lineWidth = 3;
+      // Arena boundary line
+      ctx.strokeStyle = 'rgba(56, 189, 248, 0.25)';
+      ctx.lineWidth = 2.5;
       ctx.strokeRect(2, 2, LOGICAL_WIDTH - 4, LOGICAL_HEIGHT - 4);
 
-      for (let i = 0; i < player.trail.length; i++) {
-        const t = player.trail[i];
-        const r = player.radius * (0.4 + (i / player.trail.length) * 0.5);
-        ctx.beginPath();
-        ctx.arc(t.x, t.y, r, 0, Math.PI * 2);
-        ctx.fillStyle = currentEnzyme ? currentEnzyme.glow : 'rgba(56, 189, 248, 0.2)';
-        ctx.fill();
+      // Render Player Trails (Simplified circle draws, max 4 items)
+      if (player.trail.length > 0) {
+        const trailFill = currentEnzyme ? currentEnzyme.color : '#38bdf8';
+        for (let i = 0; i < player.trail.length; i++) {
+          const t = player.trail[i];
+          const r = player.radius * (0.35 + (i / player.trail.length) * 0.45);
+          ctx.beginPath();
+          ctx.arc(t.x, t.y, r, 0, Math.PI * 2);
+          ctx.fillStyle = trailFill;
+          ctx.globalAlpha = 0.15 + (i / player.trail.length) * 0.25;
+          ctx.fill();
+        }
+        ctx.globalAlpha = 1.0;
       }
 
-      for (const obs of obstacles) {
-        ctx.save();
+      // Pre-set font for obstacles to avoid repeated canvas context state thrashing
+      ctx.font = 'bold 13px Pretendard, sans-serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
 
+      // Render Obstacles (shadowBlur eliminated on touch devices for solid 60FPS)
+      for (let i = 0; i < obstacles.length; i++) {
+        const obs = obstacles[i];
+
+        // Motion trail for fast obstacles
         if (obs.speedTier === 'fast') {
-          const trailLength = 18;
           const norm = Math.sqrt(obs.vx * obs.vx + obs.vy * obs.vy) || 1;
           const dirX = obs.vx / norm;
           const dirY = obs.vy / norm;
 
           ctx.beginPath();
           ctx.moveTo(obs.x, obs.y);
-          ctx.lineTo(obs.x - dirX * trailLength, obs.y - dirY * trailLength);
-          ctx.strokeStyle = obs.glowColor;
-          ctx.lineWidth = 3;
+          ctx.lineTo(obs.x - dirX * 16, obs.y - dirY * 16);
+          ctx.strokeStyle = obs.borderColor;
+          ctx.lineWidth = 2.5;
           ctx.lineCap = 'round';
           ctx.stroke();
         }
 
+        // Nutrient Body Circle
         ctx.beginPath();
         ctx.arc(obs.x, obs.y, obs.radius, 0, Math.PI * 2);
-        ctx.shadowColor = obs.glowColor;
-        ctx.shadowBlur = 8;
         ctx.fillStyle = obs.fillColor;
         ctx.fill();
-        ctx.lineWidth = 2.5;
+        ctx.lineWidth = 2;
         ctx.strokeStyle = obs.borderColor;
         ctx.stroke();
 
-        ctx.shadowBlur = 0;
-        ctx.font = '900 13px Pretendard, -apple-system, sans-serif';
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle';
-
-        ctx.lineWidth = 3.5;
-        ctx.strokeStyle = '#020617';
-        ctx.strokeText(obs.type, obs.x, obs.y);
-
+        // Optimized text rendering (Simple dark contrast background pill for readability without strokeText overhead)
+        ctx.fillStyle = '#020617';
+        ctx.fillText(obs.type, obs.x + 1, obs.y + 1);
         ctx.fillStyle = '#ffffff';
         ctx.fillText(obs.type, obs.x, obs.y);
-
-        ctx.restore();
       }
 
+      // Render Player (Enzyme)
       if (gameState === 'PLAYING' || gameState === 'GAMEOVER') {
         ctx.save();
         ctx.translate(player.x, player.y);
 
         const col = currentEnzyme ? currentEnzyme.color : '#38bdf8';
-        ctx.shadowColor = col;
-        ctx.shadowBlur = 18;
 
+        // Outer rotating active-site arc (No heavy blur)
+        const rotTime = performance.now() * 0.003;
+        ctx.beginPath();
+        ctx.arc(0, 0, player.radius + 5, rotTime, rotTime + Math.PI * 1.5);
+        ctx.strokeStyle = col;
+        ctx.lineWidth = 2;
+        ctx.stroke();
+
+        // Enzyme body
         ctx.beginPath();
         ctx.arc(0, 0, player.radius, 0, Math.PI * 2);
         ctx.fillStyle = col;
         ctx.fill();
 
+        // Inner core
         ctx.beginPath();
         ctx.arc(0, 0, player.radius * 0.65, 0, Math.PI * 2);
         ctx.fillStyle = '#0f172a';
         ctx.fill();
 
-        ctx.shadowBlur = 0;
-        ctx.font = 'bold 13px sans-serif';
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle';
+        // Enzyme Symbol
+        ctx.font = 'bold 12px sans-serif';
         ctx.fillStyle = '#ffffff';
         ctx.fillText(currentEnzyme ? currentEnzyme.icon : '⚡', 0, 0);
 
-        const rotTime = performance.now() * 0.003;
-        ctx.beginPath();
-        ctx.arc(0, 0, player.radius + 6, rotTime, rotTime + Math.PI * 1.5);
-        ctx.strokeStyle = col;
-        ctx.lineWidth = 2;
-        ctx.stroke();
-
+        // Player enzyme name tag
         ctx.font = 'bold 11px Pretendard, sans-serif';
-        ctx.fillStyle = '#ffffff';
-        ctx.shadowColor = 'rgba(0,0,0,0.8)';
-        ctx.shadowBlur = 4;
-        ctx.fillText(currentEnzyme ? currentEnzyme.name : '', 0, -player.radius - 12);
+        ctx.fillStyle = '#f8fafc';
+        ctx.fillText(currentEnzyme ? currentEnzyme.name : '', 0, -player.radius - 10);
 
         ctx.restore();
       }
 
-      for (const p of particles) {
-        ctx.save();
+      // Render Particles (Capped particle size & counts)
+      for (let i = 0; i < particles.length; i++) {
+        const p = particles[i];
         ctx.globalAlpha = Math.max(0, p.alpha);
         ctx.beginPath();
         ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
         ctx.fillStyle = p.color;
-        ctx.shadowColor = p.color;
-        ctx.shadowBlur = 6;
         ctx.fill();
-        ctx.restore();
       }
+      ctx.globalAlpha = 1.0;
 
-      for (const f of floaters) {
-        ctx.save();
+      // Render Floaters
+      for (let i = 0; i < floaters.length; i++) {
+        const f = floaters[i];
         ctx.globalAlpha = Math.max(0, f.alpha);
-        ctx.font = 'bold 14px Pretendard, sans-serif';
-        ctx.textAlign = 'center';
+        ctx.font = 'bold 13px Pretendard, sans-serif';
         ctx.fillStyle = f.color;
-        ctx.shadowColor = 'rgba(0,0,0,0.8)';
-        ctx.shadowBlur = 5;
         ctx.fillText(f.text, f.x, f.y);
-        ctx.restore();
       }
+      ctx.globalAlpha = 1.0;
     }
 
     const DEFAULT_SHEETS_WEBHOOK_URL = 'https://script.google.com/macros/s/AKfycbxZ9reO5k-CDMuwcVupwzVlphvhK6fbOx9R1PGn9qnoLHu2t_SQUyx_j84V4CB8iWj9XQ/exec';
