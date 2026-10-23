@@ -23,6 +23,42 @@
     .dpad-btn:active {
       transform: scale(0.92);
     }
+    /* Virtual Joystick Styles */
+    .joystick-zone {
+      touch-action: none;
+      user-select: none;
+      -webkit-user-select: none;
+      position: relative;
+    }
+    .joystick-base {
+      position: relative;
+      width: 120px;
+      height: 120px;
+      border-radius: 9999px;
+      background: radial-gradient(circle, rgba(30, 41, 59, 0.9) 0%, rgba(15, 23, 42, 0.95) 100%);
+      border: 2px solid rgba(56, 189, 248, 0.4);
+      box-shadow: inset 0 0 15px rgba(0, 0, 0, 0.6), 0 4px 15px rgba(0, 0, 0, 0.4);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: grab;
+    }
+    .joystick-base:active {
+      cursor: grabbing;
+      border-color: rgba(56, 189, 248, 0.8);
+    }
+    .joystick-thumb {
+      position: absolute;
+      width: 48px;
+      height: 48px;
+      border-radius: 9999px;
+      background: radial-gradient(circle at 35% 35%, #38bdf8 0%, #0284c7 60%, #0369a1 100%);
+      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.5), 0 0 12px rgba(56, 189, 248, 0.6);
+      border: 2px solid rgba(255, 255, 255, 0.8);
+      pointer-events: none;
+      transform: translate3d(0, 0, 0);
+      transition: transform 0.05s ease-out;
+    }
   </style>
 </head>
 <body class="bg-slate-950 text-slate-100 min-h-screen flex flex-col items-center justify-between p-2 sm:p-4 select-none overflow-x-hidden">
@@ -172,105 +208,135 @@
         <p class="text-xs text-slate-400">당신에게 적합한 소화 효소를 활성화하고 있습니다!</p>
       </div>
 
-      <!-- Overlay: Game Over Screen -->
-      <div id="overlay-gameover" class="absolute inset-0 bg-slate-950/95 backdrop-blur-md flex flex-col items-center justify-center p-6 text-center z-30 hidden">
-        <div class="w-14 h-14 rounded-2xl bg-rose-500/20 border border-rose-500/40 flex items-center justify-center text-rose-400 mb-3 shadow-lg shadow-rose-500/20">
-          <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-          </svg>
-        </div>
+      <!-- Overlay: Game Over Screen (Optimized for all viewports without button clipping) -->
+      <div id="overlay-gameover" class="absolute inset-0 bg-slate-950/95 backdrop-blur-md flex flex-col items-center justify-between p-3 sm:p-5 text-center z-30 overflow-y-auto max-h-full hidden">
+        <div class="w-full max-w-md flex flex-col items-center my-auto py-1">
+          <div class="w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-rose-500/20 border border-rose-500/40 flex items-center justify-center text-rose-400 mb-1.5 shadow-lg shadow-rose-500/20">
+            <svg class="w-6 h-6 sm:w-7 sm:h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+            </svg>
+          </div>
 
-        <h2 class="text-3xl font-black text-rose-400 mb-1">GAME OVER!</h2>
-        <p id="gameover-cause" class="text-sm text-slate-300 mb-4 font-medium">소화할 수 없는 영양소와 충돌했습니다!</p>
+          <h2 class="text-xl sm:text-2xl font-black text-rose-400 mb-0.5">GAME OVER!</h2>
+          <p id="gameover-cause" class="text-xs sm:text-sm text-slate-300 mb-2.5 font-medium">소화할 수 없는 영양소와 충돌했습니다!</p>
 
-        <!-- Result Box -->
-        <div class="w-full max-w-md bg-slate-900/90 rounded-2xl border border-slate-800 p-4 mb-4 shadow-xl text-left">
-          <div class="grid grid-cols-2 gap-3 mb-3">
-            <div class="bg-slate-950/80 p-3 rounded-xl border border-slate-800/80">
-              <span class="text-xs text-slate-400 font-semibold block">총 피한 시간</span>
-              <span id="final-survived-time" class="text-2xl sm:text-3xl font-extrabold text-amber-400 font-mono">0.00초</span>
+          <!-- Result Box -->
+          <div class="w-full bg-slate-900/90 rounded-xl sm:rounded-2xl border border-slate-800 p-2.5 sm:p-3.5 mb-2 shadow-xl text-left">
+            <div class="grid grid-cols-2 gap-2 mb-2">
+              <div class="bg-slate-950/80 p-2 sm:p-2.5 rounded-lg border border-slate-800/80">
+                <span class="text-[11px] text-slate-400 font-semibold block">총 피한 시간</span>
+                <span id="final-survived-time" class="text-xl sm:text-2xl font-extrabold text-amber-400 font-mono">0.00초</span>
+              </div>
+              <div class="bg-slate-950/80 p-2 sm:p-2.5 rounded-lg border border-slate-800/80">
+                <span class="text-[11px] text-slate-400 font-semibold block">최고 기록</span>
+                <span id="best-survived-time" class="text-xl sm:text-2xl font-extrabold text-sky-400 font-mono">0.00초</span>
+              </div>
             </div>
-            <div class="bg-slate-950/80 p-3 rounded-xl border border-slate-800/80">
-              <span class="text-xs text-slate-400 font-semibold block">최고 기록</span>
-              <span id="best-survived-time" class="text-2xl sm:text-3xl font-extrabold text-sky-400 font-mono">0.00초</span>
+
+            <div class="space-y-1 text-[11px] sm:text-xs text-slate-300 bg-slate-950/40 p-2 sm:p-2.5 rounded-lg border border-slate-800/50">
+              <div class="flex justify-between items-center">
+                <span class="text-slate-400">플레이한 효소:</span>
+                <span id="final-enzyme-name" class="font-bold text-white">-</span>
+              </div>
+              <div class="flex justify-between items-center">
+                <span class="text-slate-400">소화 완료 영양소:</span>
+                <span id="final-digested-count" class="font-bold text-emerald-400">0개</span>
+              </div>
+              <div class="flex justify-between items-center">
+                <span class="text-slate-400">충돌 장애물(원인):</span>
+                <span id="final-hit-obstacle" class="font-bold text-rose-400">-</span>
+              </div>
+            </div>
+
+            <div id="science-tip" class="mt-2 p-2 rounded-lg bg-indigo-950/50 border border-indigo-500/30 text-[10.5px] sm:text-[11px] text-indigo-200 leading-snug">
+              💡 <strong>과학 상식:</strong> 아밀레이스는 침과 이자액에 들어있으며 녹말만 포도당/엿당으로 분해할 수 있습니다.
             </div>
           </div>
 
-          <div class="space-y-1.5 text-xs text-slate-300 bg-slate-950/40 p-3 rounded-xl border border-slate-800/50">
-            <div class="flex justify-between items-center">
-              <span class="text-slate-400">플레이한 효소:</span>
-              <span id="final-enzyme-name" class="font-bold text-white">-</span>
+          <!-- Player Name & Google Sheets Manual-sync status -->
+          <div class="w-full bg-slate-900/90 rounded-xl sm:rounded-2xl border border-slate-800 p-2.5 sm:p-3 mb-2.5 text-left shadow-lg">
+            <div class="flex items-center justify-between text-[11px] text-slate-400 mb-1.5">
+              <span class="font-bold text-slate-200 flex items-center gap-1">
+                <span>💾</span> 이름 입력 후 전송
+              </span>
+              <span id="save-status-msg" class="text-amber-400 font-bold text-[10.5px]">이름 입력 후 전송을 눌러주세요</span>
             </div>
-            <div class="flex justify-between items-center">
-              <span class="text-slate-400">소화 완료 영양소:</span>
-              <span id="final-digested-count" class="font-bold text-emerald-400">0개</span>
+            <div class="flex gap-1.5">
+              <input id="input-player-name" type="text" maxlength="10" placeholder="이름/닉네임 입력 (예: 생물왕)" class="flex-1 px-2.5 py-1.5 bg-slate-950 border border-slate-700 rounded-lg sm:rounded-xl text-xs text-white focus:outline-none focus:border-cyan-400 font-medium placeholder-slate-500">
+              <button id="btn-save-record-name" class="px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-500 active:scale-95 text-white rounded-lg sm:rounded-xl text-xs font-bold transition flex items-center gap-1 cursor-pointer shadow-md shadow-emerald-900/40 whitespace-nowrap">
+                <span>📤</span> 기록 전송
+              </button>
             </div>
-            <div class="flex justify-between items-center">
-              <span class="text-slate-400">충돌 장애물(원인):</span>
-              <span id="final-hit-obstacle" class="font-bold text-rose-400">-</span>
-            </div>
+            <p class="text-[9.5px] sm:text-[10px] text-slate-400 mt-1 leading-normal">
+              * [기록 전송] 클릭 시 구글 스프레드시트에 내 기록이 1회 저장됩니다.
+            </p>
           </div>
 
-          <div id="science-tip" class="mt-3 p-2.5 rounded-lg bg-indigo-950/50 border border-indigo-500/30 text-[11px] text-indigo-200 leading-relaxed">
-            💡 <strong>과학 상식:</strong> 아밀레이스는 침과 이자액에 들어있으며 녹말만 포도당/엿당으로 분해할 수 있습니다.
-          </div>
-        </div>
-
-        <!-- Player Name & Google Sheets Manual-sync status -->
-        <div class="w-full max-w-md bg-slate-900/90 rounded-2xl border border-slate-800 p-3.5 mb-4 text-left shadow-lg">
-          <div class="flex items-center justify-between text-xs text-slate-400 mb-2">
-            <span class="font-bold text-slate-200 flex items-center gap-1">
-              <span>💾</span> 플레이어 이름 입력 후 저장
-            </span>
-            <span id="save-status-msg" class="text-amber-400 font-bold text-[11px]">이름 입력 후 전송 버튼을 눌러주세요</span>
-          </div>
-          <div class="flex gap-2">
-            <input id="input-player-name" type="text" maxlength="10" placeholder="이름/닉네임 입력 (예: 생물왕)" class="flex-1 px-3 py-2 bg-slate-950 border border-slate-700 rounded-xl text-xs text-white focus:outline-none focus:border-cyan-400 font-medium placeholder-slate-500">
-            <button id="btn-save-record-name" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 active:scale-95 text-white rounded-xl text-xs font-bold transition flex items-center gap-1 cursor-pointer shadow-md shadow-emerald-900/40">
-              <span>📤</span> 기록 전송
+          <!-- Bottom Action Buttons: Always visible -->
+          <div class="flex flex-wrap gap-2 justify-center w-full pt-1">
+            <button id="btn-restart-game" class="flex-1 min-w-[140px] px-4 py-2 sm:py-2.5 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white font-extrabold text-xs sm:text-sm shadow-lg shadow-cyan-500/30 transition transform hover:-translate-y-0.5 active:translate-y-0 cursor-pointer">
+              🔄 다시 도전하기
+            </button>
+            <button id="btn-gameover-view-db" class="flex-1 min-w-[130px] px-3.5 py-2 sm:py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 hover:text-white font-bold text-xs sm:text-sm shadow transition cursor-pointer">
+              📊 기록 DB 보기
             </button>
           </div>
-          <p class="text-[10px] text-slate-400 mt-1.5 leading-normal">
-            * 닉네임을 작성하고 [기록 전송]을 누르면 구글 스프레드시트에 내 기록이 단 1회 등록됩니다.
-          </p>
-        </div>
-
-        <div class="flex flex-wrap gap-2.5 justify-center">
-          <button id="btn-restart-game" class="px-6 py-2.5 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white font-extrabold text-sm sm:text-base shadow-lg shadow-cyan-500/30 transition transform hover:-translate-y-0.5 active:translate-y-0 cursor-pointer">
-            🔄 다시 도전하기 (새 효소 배정)
-          </button>
-          <button id="btn-gameover-view-db" class="px-5 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 hover:text-white font-bold text-sm sm:text-base shadow transition">
-            📊 기록 DB / 시트 보기
-          </button>
         </div>
       </div>
     </div>
   </main>
 
-  <!-- Bottom Keypad / Virtual D-Pad -->
-  <footer class="w-full max-w-4xl mt-3 flex flex-col sm:flex-row items-center justify-between gap-3 bg-slate-900/80 p-3 rounded-2xl border border-slate-800">
-    <div class="text-xs text-slate-400 text-center sm:text-left">
-      <div class="font-semibold text-slate-300">조작 가이드:</div>
-      키보드 방향키 또는 화면 키패드로 상하좌우 이동 | 소화 가능한 영양소로 파고들어 흡수하세요!
+  <!-- Bottom Interactive Controller Area: Joystick / D-Pad Switcher -->
+  <footer class="w-full max-w-4xl mt-3 flex flex-col sm:flex-row items-center justify-between gap-3 bg-slate-900/80 p-3 sm:p-4 rounded-2xl border border-slate-800 shadow-lg">
+    <div class="flex flex-col items-center sm:items-start gap-1.5 text-center sm:text-left">
+      <div class="flex items-center gap-2">
+        <span class="font-bold text-slate-200 text-xs sm:text-sm">조작 방식 선택:</span>
+        <div class="inline-flex rounded-xl bg-slate-950 p-1 border border-slate-800 text-xs">
+          <button id="btn-mode-joystick" class="px-2.5 py-1 rounded-lg font-bold bg-cyan-600 text-white shadow transition flex items-center gap-1">
+            <span>🕹️</span> 360° 조이스틱
+          </button>
+          <button id="btn-mode-dpad" class="px-2.5 py-1 rounded-lg font-semibold text-slate-400 hover:text-white transition flex items-center gap-1">
+            <span>⌨️</span> 4방향 키패드
+          </button>
+        </div>
+      </div>
+      <p id="controller-guide-desc" class="text-[11px] text-slate-400">
+        조이스틱 원 안을 드래그하면 360도 전 방향으로 유연하고 부드럽게 이동합니다. (키보드 방향키 동시 지원)
+      </p>
     </div>
 
-    <!-- On-screen Arrow Keypad -->
-    <div class="grid grid-cols-3 gap-1.5 w-36 sm:w-40 select-none">
-      <div></div>
-      <button id="key-up" class="dpad-btn h-11 bg-slate-800 hover:bg-slate-700 active:bg-cyan-600 rounded-xl flex items-center justify-center text-slate-200 shadow border border-slate-700 font-bold text-lg" aria-label="위로 이동">
-        ▲
-      </button>
-      <div></div>
+    <!-- Controller Panel Container -->
+    <div class="flex items-center justify-center min-h-[126px]">
+      <!-- 1. Analog Virtual Joystick Panel -->
+      <div id="container-joystick" class="joystick-zone flex flex-col items-center justify-center">
+        <div id="joystick-base" class="joystick-base">
+          <!-- Crosshair Guide inside Joystick -->
+          <div class="absolute w-full h-[1px] bg-slate-700/40 pointer-events-none"></div>
+          <div class="absolute h-full w-[1px] bg-slate-700/40 pointer-events-none"></div>
+          <div class="w-3 h-3 rounded-full bg-slate-700/60 pointer-events-none"></div>
+          <!-- Movable Thumb Knob -->
+          <div id="joystick-thumb" class="joystick-thumb"></div>
+        </div>
+      </div>
 
-      <button id="key-left" class="dpad-btn h-11 bg-slate-800 hover:bg-slate-700 active:bg-cyan-600 rounded-xl flex items-center justify-center text-slate-200 shadow border border-slate-700 font-bold text-lg" aria-label="왼쪽 이동">
-        ◀
-      </button>
-      <button id="key-down" class="dpad-btn h-11 bg-slate-800 hover:bg-slate-700 active:bg-cyan-600 rounded-xl flex items-center justify-center text-slate-200 shadow border border-slate-700 font-bold text-lg" aria-label="아래로 이동">
-        ▼
-      </button>
-      <button id="key-right" class="dpad-btn h-11 bg-slate-800 hover:bg-slate-700 active:bg-cyan-600 rounded-xl flex items-center justify-center text-slate-200 shadow border border-slate-700 font-bold text-lg" aria-label="오른쪽 이동">
-        ▶
-      </button>
+      <!-- 2. On-screen 4-Way Arrow Keypad Panel (Toggled via button) -->
+      <div id="container-dpad" class="grid grid-cols-3 gap-1.5 w-36 sm:w-40 select-none hidden">
+        <div></div>
+        <button id="key-up" class="dpad-btn h-11 bg-slate-800 hover:bg-slate-700 active:bg-cyan-600 rounded-xl flex items-center justify-center text-slate-200 shadow border border-slate-700 font-bold text-lg" aria-label="위로 이동">
+          ▲
+        </button>
+        <div></div>
+
+        <button id="key-left" class="dpad-btn h-11 bg-slate-800 hover:bg-slate-700 active:bg-cyan-600 rounded-xl flex items-center justify-center text-slate-200 shadow border border-slate-700 font-bold text-lg" aria-label="왼쪽 이동">
+          ◀
+        </button>
+        <button id="key-down" class="dpad-btn h-11 bg-slate-800 hover:bg-slate-700 active:bg-cyan-600 rounded-xl flex items-center justify-center text-slate-200 shadow border border-slate-700 font-bold text-lg" aria-label="아래로 이동">
+          ▼
+        </button>
+        <button id="key-right" class="dpad-btn h-11 bg-slate-800 hover:bg-slate-700 active:bg-cyan-600 rounded-xl flex items-center justify-center text-slate-200 shadow border border-slate-700 font-bold text-lg" aria-label="오른쪽 이동">
+          ▶
+        </button>
+      </div>
     </div>
   </footer>
 
@@ -732,6 +798,14 @@
       KeyD: false
     };
 
+    // Virtual Joystick Controller State
+    const joystickState = {
+      active: false,
+      vectorX: 0,
+      vectorY: 0,
+      maxDistance: 45 // maximum knob displacement in pixels
+    };
+
     function resizeCanvas() {
       const rect = canvas.getBoundingClientRect();
       const dpr = window.devicePixelRatio || 1;
@@ -784,6 +858,109 @@
     bindDpadButton('key-down', 'ArrowDown');
     bindDpadButton('key-left', 'ArrowLeft');
     bindDpadButton('key-right', 'ArrowRight');
+
+    // --- Virtual Joystick Controller Implementation ---
+    const joystickBase = document.getElementById('joystick-base');
+    const joystickThumb = document.getElementById('joystick-thumb');
+    const containerJoystick = document.getElementById('container-joystick');
+    const containerDpad = document.getElementById('container-dpad');
+    const btnModeJoystick = document.getElementById('btn-mode-joystick');
+    const btnModeDpad = document.getElementById('btn-mode-dpad');
+    const controllerGuideDesc = document.getElementById('controller-guide-desc');
+
+    function setControllerMode(mode) {
+      if (mode === 'joystick') {
+        containerJoystick.classList.remove('hidden');
+        containerDpad.classList.add('hidden');
+        btnModeJoystick.className = 'px-2.5 py-1 rounded-lg font-bold bg-cyan-600 text-white shadow transition flex items-center gap-1';
+        btnModeDpad.className = 'px-2.5 py-1 rounded-lg font-semibold text-slate-400 hover:text-white transition flex items-center gap-1';
+        controllerGuideDesc.textContent = '조이스틱 원 안을 드래그하면 360도 전 방향으로 유연하고 부드럽게 이동합니다. (키보드 방향키 동시 지원)';
+      } else {
+        containerJoystick.classList.add('hidden');
+        containerDpad.classList.remove('hidden');
+        btnModeDpad.className = 'px-2.5 py-1 rounded-lg font-bold bg-cyan-600 text-white shadow transition flex items-center gap-1';
+        btnModeJoystick.className = 'px-2.5 py-1 rounded-lg font-semibold text-slate-400 hover:text-white transition flex items-center gap-1';
+        controllerGuideDesc.textContent = '상하좌우 4방향 버튼을 터치하여 직각으로 이동합니다. (키보드 방향키 동시 지원)';
+      }
+    }
+
+    btnModeJoystick.addEventListener('click', () => setControllerMode('joystick'));
+    btnModeDpad.addEventListener('click', () => setControllerMode('dpad'));
+
+    function handleJoystickStart(clientX, clientY) {
+      sound.init();
+      joystickState.active = true;
+      handleJoystickMove(clientX, clientY);
+    }
+
+    function handleJoystickMove(clientX, clientY) {
+      if (!joystickState.active) return;
+      const rect = joystickBase.getBoundingClientRect();
+      const centerX = rect.left + rect.width / 2;
+      const centerY = rect.top + rect.height / 2;
+
+      let dx = clientX - centerX;
+      let dy = clientY - centerY;
+      const dist = Math.sqrt(dx * dx + dy * dy);
+
+      if (dist > joystickState.maxDistance) {
+        dx = (dx / dist) * joystickState.maxDistance;
+        dy = (dy / dist) * joystickState.maxDistance;
+      }
+
+      // Normalized direction vector (-1.0 to 1.0)
+      joystickState.vectorX = dx / joystickState.maxDistance;
+      joystickState.vectorY = dy / joystickState.maxDistance;
+
+      // Update Visual Thumb position
+      joystickThumb.style.transform = `translate3d(${dx}px, ${dy}px, 0)`;
+    }
+
+    function handleJoystickEnd() {
+      joystickState.active = false;
+      joystickState.vectorX = 0;
+      joystickState.vectorY = 0;
+      joystickThumb.style.transform = `translate3d(0, 0, 0)`;
+    }
+
+    // Touch Event Handlers
+    joystickBase.addEventListener('touchstart', (e) => {
+      e.preventDefault();
+      const touch = e.touches[0];
+      handleJoystickStart(touch.clientX, touch.clientY);
+    }, { passive: false });
+
+    window.addEventListener('touchmove', (e) => {
+      if (!joystickState.active) return;
+      e.preventDefault();
+      for (let i = 0; i < e.touches.length; i++) {
+        const touch = e.touches[i];
+        handleJoystickMove(touch.clientX, touch.clientY);
+        break;
+      }
+    }, { passive: false });
+
+    window.addEventListener('touchend', () => {
+      if (joystickState.active) handleJoystickEnd();
+    });
+    window.addEventListener('touchcancel', () => {
+      if (joystickState.active) handleJoystickEnd();
+    });
+
+    // Mouse Event Handlers for PC Joystick testing
+    joystickBase.addEventListener('mousedown', (e) => {
+      e.preventDefault();
+      handleJoystickStart(e.clientX, e.clientY);
+    });
+
+    window.addEventListener('mousemove', (e) => {
+      if (!joystickState.active) return;
+      handleJoystickMove(e.clientX, e.clientY);
+    });
+
+    window.addEventListener('mouseup', () => {
+      if (joystickState.active) handleJoystickEnd();
+    });
 
     const liveTimerEl = document.getElementById('live-timer');
     const liveDigestEl = document.getElementById('live-digest-count');
@@ -1120,6 +1297,18 @@
           const len = Math.SQRT2;
           moveX /= len;
           moveY /= len;
+        }
+
+        // Combine Keyboard input with 360-degree Smooth Analog Joystick
+        if (joystickState.active || Math.abs(joystickState.vectorX) > 0.05 || Math.abs(joystickState.vectorY) > 0.05) {
+          moveX += joystickState.vectorX;
+          moveY += joystickState.vectorY;
+          // Clamp combined vector length to max 1.0
+          const combinedLen = Math.sqrt(moveX * moveX + moveY * moveY);
+          if (combinedLen > 1.0) {
+            moveX /= combinedLen;
+            moveY /= combinedLen;
+          }
         }
 
         player.x += moveX * player.speed * dt;
